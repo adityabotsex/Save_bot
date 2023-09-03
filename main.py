@@ -14,23 +14,15 @@ ss = os.environ.get("STRING", "")
 bot = Client("mybot",api_id=api_id,api_hash=api_hash,bot_token=bot_token)
 acc = Client("myacc",api_id=api_id,api_hash=api_hash,session_string=ss)
 
-
-@bot.on_message(filters.command(["start"]))
-async def account_login(bot: Client, m: Message):
- editable = await m.reply_text("**I am a simple save restricted bot**.\n\nSend message link to clone/download here\n Must join:- @Bypass_restricted")
-@bot.on_message(filters.command(["bulk"]))
-async def account_login(bot: Client, m: Message):
- editable = await m.reply_text("**I am not an advanced bot")
-
 # download status
-def downstatus(statusfile,message):
+def downstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
             break
 
     time.sleep(3)      
     while os.path.exists(statusfile):
-        with open(statusfile,"r") as downread:
+        with open(statusfile, "r") as downread:
             txt = downread.read()
         try:
             bot.edit_message_text(message.chat.id, message.id, f"__Downloaded__ : **{txt}**")
@@ -38,16 +30,15 @@ def downstatus(statusfile,message):
         except:
             time.sleep(5)
 
-
 # upload status
-def upstatus(statusfile,message):
+def upstatus(statusfile, message):
     while True:
         if os.path.exists(statusfile):
             break
 
     time.sleep(3)      
     while os.path.exists(statusfile):
-        with open(statusfile,"r") as upread:
+        with open(statusfile, "r") as upread:
             txt = upread.read()
         try:
             bot.edit_message_text(message.chat.id, message.id, f"__Uploaded__ : **{txt}**")
@@ -55,12 +46,51 @@ def upstatus(statusfile,message):
         except:
             time.sleep(5)
 
-
-# progress writter
+# progress writer
 def progress(current, total, message, type):
-    with open(f'{message.id}{type}status.txt',"w") as fileup:
+    with open(f'{message.id}{type}status.txt', "w") as fileup:
         fileup.write(f"{current * 100 / total:.1f}%")
 
+@bot.on_message(filters.command(["start"]))
+async def account_login(bot: Client, m: Message):
+    editable = await m.reply_text("**I am a simple save restricted bot**.\n\nSend message link to clone/download here\n Must join:- @Bypass_restricted")
+
+@bot.on_message(filters.command(["bulk"]))
+async def account_login(bot: Client, m: Message):
+    editable = await m.reply_text("**I am not an advanced bot")
+
+@bot.on_message(filters.command(["batch"]))
+async def batch_forward(bot: Client, m: Message):
+    if len(m.command) < 2:
+        await m.reply_text("Please provide a list of message links to batch forward.")
+        return
+    
+    message_links = m.command[1:]
+    for link in message_links[:100]:  # Limit to the first 100 links for batch forwarding
+        if "https://t.me/" in link:
+            await forward_message(link, m)
+        else:
+            await m.reply_text(f"Invalid link: {link}")
+
+async def forward_message(link, m):
+    datas = link.split("/")
+    msgid = int(datas[-1])
+
+    # Check if the link is for a private chat or public chat
+    if "https://t.me/c/" in link:
+        chatid = int("-100" + datas[-2])
+        with acc:
+            msg = acc.get_messages(chatid, msgid)
+
+        # Forward the message to the current chat
+        await bot.forward_messages(m.chat.id, chatid, msgid)
+
+    else:
+        username = datas[-2]
+        msg = await bot.get_messages(username, msgid)
+
+        # Forward the message to the current chat
+        await bot.forward_messages(m.chat.id, username, msgid)
 
 @bot.on_message(filters.text)
 def save(client: pyrogram.client.Client, message: pyrogram.types.messages_and_media.message.Message):
@@ -145,13 +175,11 @@ def save(client: pyrogram.client.Client, message: pyrogram.types.messages_and_me
             elif "Photo" in str(msg):
                 bot.send_photo(message.chat.id, file, caption=msg.caption, caption_entities=msg.caption_entities, reply_to_message_id=message.id)
 
-
             os.remove(file)
             if os.path.exists(f'{message.id}upstatus.txt'):
                 os.remove(f'{message.id}upstatus.txt')
             bot.delete_messages(message.chat.id,[smsg.id])
-                
-        
+
         # public
         else:
             username = datas[-2]
@@ -180,7 +208,6 @@ def save(client: pyrogram.client.Client, message: pyrogram.types.messages_and_me
 
             elif "Photo" in str(msg):
                 bot.send_photo(message.chat.id, msg.photo.file_id, caption=msg.caption, caption_entities=msg.caption_entities, reply_to_message_id=message.id)
-
 
 # infinty polling
 bot.run()
